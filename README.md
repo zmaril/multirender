@@ -28,7 +28,7 @@ MultiRender is a Blender add-on that enables rendering of multiple images with a
 4. Click the `Start MultiRender` button to begin the batch rendering process.
 
 ## Development
-The MultiRender add-on is open-source and contributions are welcome. You can clone the repository and start making improvements. Make sure to test your changes locally before making a pull request. The first pass of this plugin was written with and by ChatGPT. 
+The MultiRender add-on is open-source and contributions are welcome. You can clone the repository and start making improvements. Make sure to test your changes locally before making a pull request. The first pass of this plugin was written with and by ChatGPT ([link](https://chat.openai.com/share/edf6eefb-2061-4a1f-84d2-c309a555a925)). 
 
 ## Inspiration 
 
