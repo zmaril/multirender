@@ -4,6 +4,8 @@ import logging
 import tempfile
 from bpy.props import StringProperty, EnumProperty, BoolProperty
 
+from bpy.app.handlers import persistent
+
 # Set up logging
 log_dir = tempfile.gettempdir()
 log_file = os.path.join(log_dir, "multirender.log")
@@ -39,12 +41,25 @@ class MultiRenderProperties(bpy.types.PropertyGroup):
         name="Parallel Processing",
         default=False,
     )
+    produce_contact_sheet: BoolProperty(
+       name="Produce Contact Sheet",
+       default=False,
+       update=lambda self, context: check_pillow_installed(self, context),
+    )
     log_path: StringProperty(
         name="Log File Path",
         default=log_file,
         subtype='FILE_PATH',
         options={'HIDDEN', 'SKIP_SAVE'},
     )
+
+def check_pillow_installed(self, context):
+    try:
+        import PIL
+    except ImportError:
+        self.produce_contact_sheet = False
+        self.report({'ERROR'}, "Pillow library is not installed. Please install it to use the Contact Sheet feature.")
+        
 
 # Define operator
 class RENDER_OT_multirender(bpy.types.Operator):
@@ -92,7 +107,11 @@ class RENDER_OT_multirender(bpy.types.Operator):
                 bpy.context.scene.render.filepath = os.path.join(marker_dir, f"{camera.name}.{output_format.lower()}")
 
                 # Render
-                bpy.ops.render.render(write_still=True)
+                #bpy.ops.render.render(write_still=True)
+
+        # Create contact sheet
+        if props.produce_contact_sheet:
+          create_contact_sheet(cameras, markers, output_path)
 
         return {'FINISHED'}
 
@@ -111,6 +130,7 @@ class RENDER_PT_multirender(bpy.types.Panel):
         # Draw properties
         layout.prop(scene.multi_render_props, "output_path")
         layout.prop(scene.multi_render_props, "output_format")
+        layout.prop(scene.multi_render_props, "produce_contact_sheet")
         layout.prop(scene.multi_render_props, "parallel")
 
         # Draw render button
@@ -136,3 +156,51 @@ def unregister():
 
 if __name__ == "__main__":
     register()
+
+def create_contact_sheet(cameras, markers, output_path):
+    from PIL import Image, ImageDraw, ImageFont
+    
+    # Load images
+    images = [[Image.open(os.path.join(output_path, marker.name, f"{camera.name}.png")) for marker in markers] for camera in cameras]
+
+    # Create contact sheet
+    widths, heights = zip(*(i.size for i in images[0]))
+    total_width = sum(widths)
+    avg_width = sum(widths) // len(cameras)
+    max_height = max(heights) * len(cameras)
+    avg_height = sum(heights) // len(cameras)
+    contact_sheet = Image.new('RGB', (total_width, max_height))
+
+    # Paste images
+    
+    # for row, camera in enumerate(cameras):
+    #    for column, marker in enumerate(markers):
+    #         print(f"Adding text for camera {camera.name}, marker {marker.name}")
+    #         draw = ImageDraw.Draw(composite_image)
+    #         text = f"Camera: {camera.name}\nMarker: {marker.name}"
+    #         font = ImageFont.truetype("arial", 20)  # ensure the font size is large enough to be visible
+    #         text_width, text_height = draw.textsize(text, font=font)
+    #         text_position = (current_x + image_width // 2 - text_width // 2,
+    #                          current_y + image_height // 2 - text_height // 2)
+    #         draw.text(text_position, text, font=font, fill='white')  # ensure the text color contrasts with the image
+    #         print(f"Added text at position {text_position} with size {(text_width, text_height)}")
+
+    draw = ImageDraw.Draw(contact_sheet)
+    font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Tahoma.ttf", 30)
+
+    y_offset = 0
+    for i in range(len(cameras)):
+        # Add in text header for camera here 
+        x_offset = 0
+        for j in range(len(markers)):
+            contact_sheet.paste(images[i][j], (x_offset, y_offset))
+            #if i == 0:
+                #draw.text((x_offset+ 100, 20), f"Marker: {markers[i].name}", font=font, fill='black')
+            draw.text((x_offset+ 100, y_offset+50), f"{cameras[i].name} at {markers[j].name}", font=font, fill='black')
+            x_offset += images[i][j].width
+
+        #draw.text((20, y_offset+50), f"Camera: {cameras[i].name}", font=font, fill='black')
+        y_offset += images[i][0].height
+
+    contact_sheet_path = os.path.join(output_path, "contact_sheet.png")
+    contact_sheet.save(contact_sheet_path)
