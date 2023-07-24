@@ -107,7 +107,7 @@ class RENDER_OT_multirender(bpy.types.Operator):
                 bpy.context.scene.render.filepath = os.path.join(marker_dir, f"{camera.name}.{output_format.lower()}")
 
                 # Render
-                #bpy.ops.render.render(write_still=True)
+                bpy.ops.render.render(write_still=True)
 
         # Create contact sheet
         if props.produce_contact_sheet:
